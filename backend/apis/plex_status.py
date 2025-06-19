@@ -16,7 +16,7 @@ from sharedutil import errlog
 def get_status(url: str) -> int:
     try:
         response = requests.get(url, timeout=0.03)  # 30ms timeout
-        if response.status_code != 200:
+        if response.status_code not in [200, 401]:
             return False
         return True
     except Exception as e:

@@ -1,0 +1,13 @@
+# Backend
+backend/testing.py
+backend/__pycache__
+backend/.venv
+backend/apis/__pycache__
+backend/external/config.json
+backend/external/database/sqlite**
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/build
+frontend/package-lock.json

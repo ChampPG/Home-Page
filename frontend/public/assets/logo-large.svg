@@ -1,0 +1,23 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#gradient)" stroke="#4f46e5" stroke-width="3"/>
+  
+  <!-- Uptime indicator dots -->
+  <circle cx="22" cy="26" r="4" fill="#10b981"/>
+  <circle cx="32" cy="22" r="4" fill="#10b981"/>
+  <circle cx="42" cy="26" r="4" fill="#10b981"/>
+  <circle cx="26" cy="36" r="4" fill="#10b981"/>
+  <circle cx="38" cy="36" r="4" fill="#10b981"/>
+  
+  <!-- Center monitoring icon -->
+  <circle cx="32" cy="32" r="8" fill="none" stroke="#ffffff" stroke-width="3"/>
+  <circle cx="32" cy="32" r="3" fill="#ffffff"/>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg> 

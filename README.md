@@ -34,7 +34,7 @@ A modern, real-time uptime monitoring system with a beautiful web interface buil
 
 ### 🚀 **Advanced Features**
 - **Automatic Scheduling**: Configurable check intervals
-- **Database Persistence**: SQLite storage for historical data
+- **In-Memory Storage**: Fast, lightweight data storage with automatic cleanup
 - **Docker Support**: Easy deployment with Docker Compose
 - **Health Checks**: Built-in monitoring for the monitoring system
 - **RESTful API**: JSON API for external integrations
@@ -61,11 +61,8 @@ uptime-tracker/
 │   │   ├── prowlarr_status.py
 │   │   ├── flaresolverr_status.py
 │   │   └── nginx_status.py
-│   ├── external/   # Configuration and database
-│   │   ├── config.json # Configuration file
-│   │   └── database/
-│   │       ├── db.sqlite3           # Database (created automatically)
-│   │       └── db_backup_*.sqlite3  # Backup files
+│   ├── external/           # Configuration
+│   │   └── config.json     # Configuration file
 │   ├── app.py             # Main Flask application
 │   ├── sharedutil.py      # Shared utilities
 │   ├── testing.py         # Testing utilities
@@ -290,14 +287,13 @@ docker-compose down
 ### Project Structure
 - **Backend**: Flask application with modular service detection
 - **Frontend**: React with Material-UI and Chart.js
-- **Database**: SQLite for data persistence
+- **In-Memory Storage**: Fast, lightweight data storage with automatic cleanup
 - **Docker**: Multi-stage build for optimized containers
 
 ### Adding New Features
 1. Backend changes: Modify Flask app and service modules
 2. Frontend changes: Update React components
-3. Database changes: Update schema in `setup_db()`
-4. Configuration: Add new service types to config.json
+3. Configuration: Add new service types to config.json
 
 ### Testing
 ```bash
@@ -308,3 +304,67 @@ python testing.py
 # Test individual services
 python -c "import apis.wireguard_status; print(apis.wireguard_status.get_wireguard_status('192.168.0.84:51820'))"
 ```
+
+## 📈 Monitoring Features
+
+### Real-Time Monitoring
+- **Automatic Checks**: Configurable intervals (default: 60 seconds)
+- **3-Check System**: Services must fail 3 consecutive checks before being marked as down
+- **Response Time Tracking**: Monitor service performance
+- **Status History**: Track service availability over time
+- **Downtime Detection**: Automatic detection of service outages
+- **False Positive Prevention**: Reduces false alarms from temporary network issues
+
+### Historical Data
+- **24-Hour Charts**: Visualize service performance
+- **Uptime Statistics**: Calculate service availability
+- **Response Time Trends**: Monitor performance changes
+- **Downtime Events**: Track and analyze outages
+
+### Service Grouping
+- **Host-Based Organization**: Group services by physical/virtual hosts
+- **Category Organization**: Organize by service type or purpose
+- **Visual Hierarchy**: Clear service relationships in the UI
+
+### Logs and Debugging
+```bash
+# View application logs
+docker-compose logs -f uptime-tracker
+
+# Check service status
+curl http://localhost:5000/api/v1/services
+
+# Test individual service detection
+cd backend
+python -c "import apis.http_status; print(apis.http_status.get_http_status('http://localhost:3000'))"
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/new-feature`
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Catppuccin** for the beautiful color palette
+- **Material-UI** for the component library
+- **Chart.js** for data visualization
+- **Flask** for the backend framework
+- **React** for the frontend framework
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/ChampPG/Home-Page/issues)
+- **Email**: ppgleason02@gmail.com
+- **Website**: https://home.paulgleason.dev
+
+---
+
+**Built with ❤️ by Paul Gleason**

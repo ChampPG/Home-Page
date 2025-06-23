@@ -103,7 +103,7 @@ const ServiceHistoryChart = ({ open, onClose, serviceName, historyData }) => {
       },
       title: {
         display: true,
-        text: `${serviceName} - Last 24 Hours`,
+        text: `${serviceName} - Last 50 Checks`,
         color: '#ffffff'
       },
     },
@@ -177,7 +177,7 @@ const ServiceHistoryChart = ({ open, onClose, serviceName, historyData }) => {
       <DialogContent>
         <Box mb={3}>
           <Typography variant="h6" gutterBottom>
-            Statistics (Last 24 Hours)
+            Statistics (Last 50 Checks)
           </Typography>
           <Box display="flex" gap={2} flexWrap="wrap">
             <Chip 

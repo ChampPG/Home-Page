@@ -175,6 +175,7 @@ function App() {
   const [historyData, setHistoryData] = useState([])
   const [historyChartOpen, setHistoryChartOpen] = useState(false)
   const [selectedService, setSelectedService] = useState(null)
+  const [checkInterval, setCheckInterval] = useState(null)
 
   useEffect(() => {
     fetchServices()
@@ -197,6 +198,7 @@ function App() {
       setServices(data.services || [])
       setDowntimeEvents(data.downtime_events || [])
       setCategories(data.categories || [])
+      setCheckInterval(data.interval || null)
       setLoading(false)
     } catch (err) {
       setError(err.message)
@@ -367,6 +369,49 @@ function App() {
 
   const formatCategoryName = (category) => {
     return category.charAt(0).toUpperCase() + category.slice(1)
+  }
+
+  const formatInterval = (seconds) => {
+    if (seconds < 60) {
+      return `${seconds} second${seconds !== 1 ? 's' : ''}`
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60)
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`
+    } else if (seconds < 86400) {
+      const hours = Math.floor(seconds / 3600)
+      return `${hours} hour${hours !== 1 ? 's' : ''}`
+    } else {
+      const days = Math.floor(seconds / 86400)
+      return `${days} day${days !== 1 ? 's' : ''}`
+    }
+  }
+
+  const getServiceStats = () => {
+    // Get the latest status for each service
+    const latestServices = {}
+    services.forEach(service => {
+      if (!latestServices[service.name] || new Date(service.timestamp) > new Date(latestServices[service.name].timestamp)) {
+        latestServices[service.name] = service
+      }
+    })
+
+    // Filter out redirect services and hosts for uptime calculation
+    const monitorableServices = Object.values(latestServices).filter(service => 
+      service.type !== 'redirect' && service.type !== 'host'
+    )
+
+    const upServices = monitorableServices.filter(service => service.status === 'up')
+    const downServices = monitorableServices.filter(service => service.status === 'down')
+    const totalServices = monitorableServices.length
+
+    const uptimePercentage = totalServices > 0 ? Math.round((upServices.length / totalServices) * 100) : 0
+
+    return {
+      up: upServices.length,
+      down: downServices.length,
+      total: totalServices,
+      uptimePercentage
+    }
   }
 
   const ServiceCard = ({ service }) => {
@@ -822,6 +867,55 @@ function App() {
           <Typography variant="h6" component="h2" textAlign="center" gutterBottom>
             Add a description here
           </Typography>
+          {checkInterval && (
+            <Typography variant="body1" textAlign="center" color="text.secondary" sx={{ mb: 2 }}>
+              Services are checked every {formatInterval(checkInterval)}
+            </Typography>
+          )}
+          
+          {/* Service Summary */}
+          {(() => {
+            const stats = getServiceStats()
+            if (stats.total > 0) {
+              return (
+                <Box sx={{ mb: 3 }}>
+                  <Grid container spacing={2} justifyContent="center">
+                    <Grid item>
+                      <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                        <Typography variant="h4" color="success.main" fontWeight="bold">
+                          {stats.up}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Services Up
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item>
+                      <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                        <Typography variant="h4" color="error.main" fontWeight="bold">
+                          {stats.down}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Services Down
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item>
+                      <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                        <Typography variant="h4" color="primary.main" fontWeight="bold">
+                          {stats.uptimePercentage}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Uptime
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )
+            }
+            return null
+          })()}
           
           <Divider sx={{ my: 3 }} />
           
@@ -877,7 +971,7 @@ function App() {
             <>
               <Divider sx={{ my: 3 }} />
               <Typography variant="h4" component="h2" gutterBottom textAlign="center">
-                Recent Downtime Events (Last 24 Hours)
+                Recent Downtime Events (Last 50 Checks)
               </Typography>
               <Grid container spacing={2}>
                 {downtimeEvents.map((event, index) => (

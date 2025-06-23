@@ -816,8 +816,15 @@ function App() {
     return (
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
-        <Container maxWidth="sm" sx={{ mt: 8 }}>
-          <Alert severity="error" sx={{ mb: 2 }}>
+        <Box 
+          display="flex" 
+          flexDirection="column" 
+          alignItems="center" 
+          justifyContent="center" 
+          minHeight="100vh"
+          sx={{ px: 2 }}
+        >
+          <Alert severity="error" sx={{ mb: 2, maxWidth: 500, width: '100%' }}>
             <Typography variant="h6" gutterBottom>
               Error
             </Typography>
@@ -830,7 +837,7 @@ function App() {
           >
             Retry
           </Button>
-        </Container>
+        </Box>
       </ThemeProvider>
     )
   }

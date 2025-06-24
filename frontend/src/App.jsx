@@ -190,6 +190,8 @@ function App() {
 
   const fetchServices = async () => {
     try {
+      setError(null) // Clear any previous errors
+      setLoading(true) // Set loading to true when starting fetch
       const response = await fetch('/api/v1/services')
       if (!response.ok) {
         throw new Error('Failed to fetch services')
@@ -199,6 +201,39 @@ function App() {
       setDowntimeEvents(data.downtime_events || [])
       setCategories(data.categories || [])
       setCheckInterval(data.interval || null)
+      setLoading(false)
+    } catch (err) {
+      setError(err.message)
+      setLoading(false)
+    }
+  }
+
+  const retryFetch = async () => {
+    try {
+      setError(null) // Clear any previous errors
+      setLoading(true) // Set loading to true when starting fetch
+      
+      // Fetch both services and history data
+      const [servicesResponse, historyResponse] = await Promise.all([
+        fetch('/api/v1/services'),
+        fetch('/api/v1/services/history')
+      ])
+      
+      if (!servicesResponse.ok) {
+        throw new Error('Failed to fetch services')
+      }
+      
+      const servicesData = await servicesResponse.json()
+      setServices(servicesData.services || [])
+      setDowntimeEvents(servicesData.downtime_events || [])
+      setCategories(servicesData.categories || [])
+      setCheckInterval(servicesData.interval || null)
+      
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json()
+        setHistoryData(historyData.history || [])
+      }
+      
       setLoading(false)
     } catch (err) {
       setError(err.message)
@@ -404,13 +439,137 @@ function App() {
     const downServices = monitorableServices.filter(service => service.status === 'down')
     const totalServices = monitorableServices.length
 
-    const uptimePercentage = totalServices > 0 ? Math.round((upServices.length / totalServices) * 100) : 0
+    // Calculate actual uptime percentage based on all historical checks
+    let totalChecks = 0
+    let upChecks = 0
+    
+    // Get all monitorable service names
+    const monitorableServiceNames = monitorableServices.map(service => service.name)
+    
+    // Calculate uptime from history data
+    if (historyData && historyData.length > 0) {
+      historyData.forEach(check => {
+        if (monitorableServiceNames.includes(check.name)) {
+          totalChecks++
+          if (check.status === 'up') {
+            upChecks++
+          }
+        }
+      })
+    }
+    
+    // If no history data, fall back to current status calculation
+    let uptimePercentage
+    if (totalChecks > 0) {
+      uptimePercentage = Math.round((upChecks / totalChecks) * 100)
+    } else {
+      uptimePercentage = totalServices > 0 ? Math.round((upServices.length / totalServices) * 100) : 0
+    }
 
     return {
       up: upServices.length,
       down: downServices.length,
       total: totalServices,
       uptimePercentage
+    }
+  }
+
+  const getHostStats = () => {
+    const { hosts } = getServicesByHosts()
+    const hostList = Object.values(hosts)
+    
+    const upHosts = hostList.filter(host => host.status === 'up')
+    const downHosts = hostList.filter(host => host.status === 'down')
+    const totalHosts = hostList.length
+
+    // Calculate actual uptime percentage based on all historical checks
+    let totalChecks = 0
+    let upChecks = 0
+    
+    // Get all host names
+    const hostNames = hostList.map(host => host.name)
+    
+    // Calculate uptime from history data
+    if (historyData && historyData.length > 0) {
+      historyData.forEach(check => {
+        if (hostNames.includes(check.name)) {
+          totalChecks++
+          if (check.status === 'up') {
+            upChecks++
+          }
+        }
+      })
+    }
+    
+    // If no history data, fall back to current status calculation
+    let uptimePercentage
+    if (totalChecks > 0) {
+      uptimePercentage = Math.round((upChecks / totalChecks) * 100)
+    } else {
+      uptimePercentage = totalHosts > 0 ? Math.round((upHosts.length / totalHosts) * 100) : 0
+    }
+
+    return {
+      up: upHosts.length,
+      down: downHosts.length,
+      total: totalHosts,
+      uptimePercentage
+    }
+  }
+
+  const getOverallUptime = () => {
+    const stats = getServiceStats()
+    const hostStats = getHostStats()
+    
+    // Calculate actual uptime percentage based on all historical checks
+    let totalChecks = 0
+    let upChecks = 0
+    
+    // Get all monitorable service names (excluding redirects)
+    const latestServices = {}
+    services.forEach(service => {
+      if (!latestServices[service.name] || new Date(service.timestamp) > new Date(latestServices[service.name].timestamp)) {
+        latestServices[service.name] = service
+      }
+    })
+    
+    const monitorableServiceNames = Object.values(latestServices)
+      .filter(service => service.type !== 'redirect')
+      .map(service => service.name)
+    
+    // Get all host names
+    const { hosts } = getServicesByHosts()
+    const hostNames = Object.values(hosts).map(host => host.name)
+    
+    // Combine all monitorable names (services + hosts)
+    const allMonitorableNames = [...monitorableServiceNames, ...hostNames]
+    
+    // Calculate uptime from history data
+    if (historyData && historyData.length > 0) {
+      historyData.forEach(check => {
+        if (allMonitorableNames.includes(check.name)) {
+          totalChecks++
+          if (check.status === 'up') {
+            upChecks++
+          }
+        }
+      })
+    }
+    
+    // If no history data, fall back to current status calculation
+    let uptimePercentage
+    if (totalChecks > 0) {
+      uptimePercentage = Math.round((upChecks / totalChecks) * 100)
+    } else {
+      const totalMonitorable = stats.total + hostStats.total
+      const totalUp = stats.up + hostStats.up
+      uptimePercentage = totalMonitorable > 0 ? Math.round((totalUp / totalMonitorable) * 100) : 0
+    }
+
+    return {
+      uptimePercentage,
+      totalChecks,
+      upChecks
     }
   }
 
@@ -833,7 +992,7 @@ function App() {
           <Button 
             variant="contained" 
             startIcon={<RefreshIcon />}
-            onClick={fetchServices}
+            onClick={retryFetch}
           >
             Retry
           </Button>
@@ -860,7 +1019,7 @@ function App() {
             <Button 
               color="inherit" 
               startIcon={<RefreshIcon />}
-              onClick={fetchServices}
+              onClick={retryFetch}
             >
               Refresh
             </Button>
@@ -880,43 +1039,115 @@ function App() {
             </Typography>
           )}
           
+          {/* Overall Uptime */}
+          {(() => {
+            const overallUptime = getOverallUptime()
+            if (overallUptime.totalChecks > 0 || overallUptime.uptimePercentage > 0) {
+              return (
+                <Box sx={{ mb: 3 }}>
+                  <Grid container justifyContent="center">
+                    <Grid item>
+                      <Paper sx={{ p: 3, textAlign: 'center', minWidth: 200 }}>
+                        <Typography variant="h3" color="primary.main" fontWeight="bold">
+                          {overallUptime.uptimePercentage}%
+                        </Typography>
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                          Overall Uptime
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Based on {overallUptime.totalChecks} total checks
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </Box>
+              )
+            }
+            return null
+          })()}
+          
           {/* Service Summary */}
           {(() => {
             const stats = getServiceStats()
-            if (stats.total > 0) {
+            const hostStats = getHostStats()
+            if (stats.total > 0 || hostStats.total > 0) {
               return (
                 <Box sx={{ mb: 3 }}>
-                  <Grid container spacing={2} justifyContent="center">
-                    <Grid item>
-                      <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
-                        <Typography variant="h4" color="success.main" fontWeight="bold">
-                          {stats.up}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Services Up
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item>
-                      <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
-                        <Typography variant="h4" color="error.main" fontWeight="bold">
-                          {stats.down}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Services Down
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item>
-                      <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
-                        <Typography variant="h4" color="primary.main" fontWeight="bold">
-                          {stats.uptimePercentage}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Uptime
-                        </Typography>
-                      </Paper>
-                    </Grid>
+                  <Grid container spacing={3} justifyContent="center" alignItems="center">
+                    {/* Hosts Stats */}
+                    {hostStats.total > 0 && (
+                      <>
+                        <Grid item>
+                          <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                            <Typography variant="h4" color="success.main" fontWeight="bold">
+                              {hostStats.up}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Hosts Up
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item>
+                          <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                            <Typography variant="h4" color="error.main" fontWeight="bold">
+                              {hostStats.down}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Hosts Down
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item>
+                          <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                            <Typography variant="h4" color="primary.main" fontWeight="bold">
+                              {hostStats.uptimePercentage}%
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Host Uptime
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item>
+                          <Divider orientation="vertical" flexItem sx={{ height: 80 }} />
+                        </Grid>
+                      </>
+                    )}
+                    
+                    {/* Services Stats */}
+                    {stats.total > 0 && (
+                      <>
+                        <Grid item>
+                          <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                            <Typography variant="h4" color="success.main" fontWeight="bold">
+                              {stats.up}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Services Up
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item>
+                          <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                            <Typography variant="h4" color="error.main" fontWeight="bold">
+                              {stats.down}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Services Down
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                        <Grid item>
+                          <Paper sx={{ p: 2, textAlign: 'center', minWidth: 120 }}>
+                            <Typography variant="h4" color="primary.main" fontWeight="bold">
+                              {stats.uptimePercentage}%
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Uptime
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      </>
+                    )}
                   </Grid>
                 </Box>
               )

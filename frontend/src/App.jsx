@@ -461,9 +461,9 @@ function App() {
     // If no history data, fall back to current status calculation
     let uptimePercentage
     if (totalChecks > 0) {
-      uptimePercentage = Math.round((upChecks / totalChecks) * 100)
+      uptimePercentage = parseFloat(((upChecks / totalChecks) * 100).toFixed(2))
     } else {
-      uptimePercentage = totalServices > 0 ? Math.round((upServices.length / totalServices) * 100) : 0
+      uptimePercentage = totalServices > 0 ? parseFloat(((upServices.length / totalServices) * 100).toFixed(2)) : 0
     }
 
     return {
@@ -504,9 +504,9 @@ function App() {
     // If no history data, fall back to current status calculation
     let uptimePercentage
     if (totalChecks > 0) {
-      uptimePercentage = Math.round((upChecks / totalChecks) * 100)
+      uptimePercentage = parseFloat(((upChecks / totalChecks) * 100).toFixed(2))
     } else {
-      uptimePercentage = totalHosts > 0 ? Math.round((upHosts.length / totalHosts) * 100) : 0
+      uptimePercentage = totalHosts > 0 ? parseFloat(((upHosts.length / totalHosts) * 100).toFixed(2)) : 0
     }
 
     return {
@@ -525,7 +525,7 @@ function App() {
     let totalChecks = 0
     let upChecks = 0
     
-    // Get all monitorable service names (excluding redirects)
+    // Get all monitorable service names (excluding redirects and hosts, same as getServiceStats)
     const latestServices = {}
     services.forEach(service => {
       if (!latestServices[service.name] || new Date(service.timestamp) > new Date(latestServices[service.name].timestamp)) {
@@ -534,10 +534,10 @@ function App() {
     })
     
     const monitorableServiceNames = Object.values(latestServices)
-      .filter(service => service.type !== 'redirect')
+      .filter(service => service.type !== 'redirect' && service.type !== 'host')
       .map(service => service.name)
     
-    // Get all host names
+    // Get all host names (same as getHostStats)
     const { hosts } = getServicesByHosts()
     const hostNames = Object.values(hosts).map(host => host.name)
     
@@ -559,11 +559,11 @@ function App() {
     // If no history data, fall back to current status calculation
     let uptimePercentage
     if (totalChecks > 0) {
-      uptimePercentage = Math.round((upChecks / totalChecks) * 100)
+      uptimePercentage = parseFloat(((upChecks / totalChecks) * 100).toFixed(2))
     } else {
       const totalMonitorable = stats.total + hostStats.total
       const totalUp = stats.up + hostStats.up
-      uptimePercentage = totalMonitorable > 0 ? Math.round((totalUp / totalMonitorable) * 100) : 0
+      uptimePercentage = totalMonitorable > 0 ? parseFloat(((totalUp / totalMonitorable) * 100).toFixed(2)) : 0
     }
 
     return {

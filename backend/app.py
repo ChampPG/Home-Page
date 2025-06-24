@@ -387,12 +387,12 @@ def run_app():
         
     scheduler_running = True
 
-    # Initialize with first service check
-    check_services()
-
     # Start the scheduler in a separate thread
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
+
+    # Initialize with first service check
+    # check_services()
 
     print("Scheduler started")
     app.run(debug=False, host='0.0.0.0', port=5000)
